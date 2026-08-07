@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Socopex — Order Dashboard</title>
+  <title>Socapex — Order Dashboard</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -12,11 +12,12 @@
       background: #f0f4f1;
       min-height: 100vh;
       padding: 32px 16px 60px;
+      -webkit-text-size-adjust: 100%;
     }
 
     header {
       max-width: 900px;
-      margin: 0 auto 28px;
+      margin: 0 auto 18px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -52,29 +53,78 @@
       background: #fff;
       color: #333;
       cursor: pointer;
+      font-family: inherit;
     }
 
+    /* ── Search bar ─────────────────────────────────────────────────────── */
+    .searchbar {
+      max-width: 900px;
+      margin: 0 auto 18px;
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .searchbar input {
+      width: 100%;
+      padding: 10px 38px 10px 38px;
+      font-size: 15px;
+      font-family: inherit;
+      border: 1.5px solid #c8d9cc;
+      border-radius: 8px;
+      background: #fff;
+      color: #222;
+      outline: none;
+    }
+    .searchbar input:focus { border-color: #4a7c59; }
+    .searchbar .search-icon {
+      position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+      font-size: 14px; color: #9bb3a2; pointer-events: none;
+    }
+    .searchbar .search-clear {
+      position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+      border: none; background: transparent; cursor: pointer;
+      font-size: 20px; line-height: 1; color: #bbb; padding: 4px 8px;
+      display: none; font-family: inherit;
+    }
+    .searchbar .search-clear:hover { color: #666; }
+    .searchbar.has-query .search-clear { display: block; }
+
+    .result-count {
+      max-width: 900px;
+      margin: -8px auto 14px;
+      font-size: 13px;
+      color: #8a9a8e;
+      display: none;
+    }
+
+    /* ── Stats ──────────────────────────────────────────────────────────── */
     .stats {
       max-width: 900px;
       margin: 0 auto 22px;
-      display: flex;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
       gap: 12px;
-      flex-wrap: wrap;
     }
     .stat-card {
       background: #fff;
       border-radius: 8px;
-      padding: 14px 22px;
-      flex: 1;
-      min-width: 120px;
+      padding: 14px 16px;
       text-align: center;
       box-shadow: 0 1px 6px rgba(0,0,0,0.07);
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: border-color 0.15s, transform 0.1s;
+      user-select: none;
     }
-    .stat-card .num { font-size: 28px; font-weight: 700; color: #2a4a30; }
-    .stat-card .lbl { font-size: 12px; color: #999; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.8px; }
+    .stat-card:hover { border-color: #cfe0d4; }
+    .stat-card:active { transform: scale(0.98); }
+    .stat-card.active { border-color: #4a7c59; }
+    .stat-card .num { font-size: 28px; font-weight: 700; color: #2a4a30; line-height: 1.1; }
+    .stat-card .lbl { font-size: 11px; color: #999; margin-top: 3px; text-transform: uppercase; letter-spacing: 0.8px; }
 
     .container { max-width: 900px; margin: 0 auto; }
 
+    /* ── Order cards ────────────────────────────────────────────────────── */
     .order-card {
       background: #fff;
       border-radius: 10px;
@@ -84,6 +134,8 @@
       transition: box-shadow 0.15s;
     }
     .order-card:hover { box-shadow: 0 3px 16px rgba(0,0,0,0.11); }
+    .order-card.archived { opacity: 0.62; background: #fbfbfa; }
+    .order-card.archived:hover { opacity: 1; }
 
     .order-header {
       padding: 14px 20px;
@@ -96,9 +148,22 @@
     }
     .order-header .name { font-size: 17px; font-weight: 600; color: #1a1a1a; }
     .order-header .meta { font-size: 12px; color: #aaa; }
+    .order-header .hdr-right { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+    .archived-tag {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.9px;
+      text-transform: uppercase;
+      background: #e8e8e8;
+      color: #777;
+      border-radius: 20px;
+      padding: 4px 10px;
+      white-space: nowrap;
+    }
 
     .status-select {
-      padding: 4px 10px;
+      padding: 5px 10px;
       border-radius: 20px;
       font-size: 12px;
       font-weight: 600;
@@ -126,7 +191,7 @@
     }
 
     .detail-item .dl { font-size: 11px; color: #bbb; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 3px; }
-    .detail-item .dv { font-size: 15px; color: #222; }
+    .detail-item .dv { font-size: 15px; color: #222; overflow-wrap: anywhere; }
     .detail-item .dv.none { color: #ccc; font-style: italic; font-size: 13px; }
 
     .color-swatch {
@@ -139,7 +204,9 @@
       position: relative; top: -1px;
     }
 
-    /* Order footer — file upload + send to printer */
+    mark.hit { background: #ffeb99; color: inherit; border-radius: 2px; padding: 0 1px; }
+
+    /* ── Order footer — file + actions ──────────────────────────────────── */
     .order-footer {
       border-top: 1px solid #f0f0f0;
       padding: 12px 20px;
@@ -154,6 +221,7 @@
       display: flex;
       align-items: center;
       gap: 6px;
+      flex-wrap: wrap;
       font-size: 13px;
       color: #555;
       min-width: 0;
@@ -163,6 +231,19 @@
     .file-name { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
     .file-meta { font-size: 11px; color: #aaa; white-space: nowrap; }
     .sent-meta  { font-size: 11px; color: #0f5132; white-space: nowrap; }
+
+    .file-links { display: flex; gap: 6px; flex-wrap: wrap; }
+    .file-link {
+      font-size: 12px;
+      text-decoration: none;
+      padding: 3px 9px;
+      border-radius: 5px;
+      background: #eef3ef;
+      color: #3a6347;
+      white-space: nowrap;
+      border: 1px solid #dde7e0;
+    }
+    .file-link:hover { background: #dfe9e2; }
 
     .order-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 
@@ -180,6 +261,9 @@
     }
     .upload-label:hover { background: #d3e4d6; }
     .upload-label.busy  { opacity: 0.6; pointer-events: none; }
+
+    .btn-archive { background: #efefef; color: #777; }
+    .btn-archive:hover { background: #e3e3e3; }
 
     .empty-state { text-align: center; padding: 60px 20px; color: #aaa; }
     .empty-state .icon { font-size: 48px; margin-bottom: 12px; }
@@ -206,6 +290,7 @@
       align-items: center;
       justify-content: center;
       z-index: 200;
+      padding: 20px;
     }
     .notify-box {
       background: #fff;
@@ -214,10 +299,10 @@
       box-shadow: 0 4px 24px rgba(0,0,0,0.18);
       text-align: center;
       max-width: 340px;
-      width: 90%;
+      width: 100%;
     }
     .notify-box p { color: #333; font-size: 15px; margin-bottom: 22px; line-height: 1.5; }
-    .notify-actions { display: flex; gap: 10px; justify-content: center; }
+    .notify-actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
     .notify-actions button {
       padding: 9px 22px; border-radius: 6px; border: none;
       cursor: pointer; font-size: 14px; font-family: inherit;
@@ -235,6 +320,7 @@
       align-items: center;
       justify-content: center;
       z-index: 100;
+      padding: 20px;
     }
     .login-box {
       background: #fff;
@@ -253,6 +339,47 @@
       margin-bottom: 14px; outline: none; font-family: inherit;
     }
     .login-box input:focus { border-color: #4a7c59; }
+
+    /* ── Mobile ─────────────────────────────────────────────────────────── */
+    @media (max-width: 640px) {
+      body { padding: 16px 12px 48px; }
+
+      header { margin-bottom: 14px; gap: 10px; }
+      header h1 { font-size: 19px; }
+      header > div:first-child { width: 100%; }
+      .controls { width: 100%; }
+      .controls select.filter-select { flex: 1; min-width: 0; padding: 10px 12px; }
+      .controls .btn { padding: 10px 14px; }
+
+      .searchbar { margin-bottom: 14px; }
+      .searchbar input { font-size: 16px; padding: 11px 38px; } /* 16px stops iOS zoom-on-focus */
+
+      .stats { grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 16px; }
+      .stat-card { padding: 10px 6px; border-width: 2px; }
+      .stat-card .num { font-size: 21px; }
+      .stat-card .lbl { font-size: 9px; letter-spacing: 0.5px; }
+
+      .order-header { padding: 12px 14px; }
+      .order-header .name { font-size: 16px; }
+      .order-header .hdr-right { width: 100%; justify-content: flex-start; }
+      .status-select { padding: 8px 26px 8px 13px; font-size: 13px; }
+
+      .order-body { padding: 14px; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 12px 14px; }
+      .detail-item .dv { font-size: 14px; }
+
+      .order-footer { padding: 12px 14px; flex-direction: column; align-items: stretch; }
+      .file-info { flex: none; }
+      .file-name { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+      .file-meta, .sent-meta { white-space: normal; }
+      /* Two per row, Archive spanning the full width underneath */
+      .order-actions { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+      .order-actions > * { text-align: center; min-height: 44px; }
+      .order-actions > *:nth-child(3) { grid-column: 1 / -1; }
+      .upload-label { padding: 13px 10px; font-size: 13px; }
+      .order-actions .btn { padding: 13px 10px; font-size: 13px; }
+      .file-link { padding: 7px 12px; font-size: 13px; }
+      .searchbar .search-clear { padding: 8px 10px; font-size: 22px; }
+    }
   </style>
 </head>
 <body>
@@ -280,20 +407,31 @@
 
 <header>
   <div>
-    <h1>📦 Socopex Orders</h1>
+    <h1>📦 Socapex Orders</h1>
     <p id="lastUpdated">Loading…</p>
   </div>
   <div class="controls">
     <select class="filter-select" id="statusFilter" onchange="renderOrders()">
-      <option value="all">All orders</option>
+      <option value="active">Active orders</option>
       <option value="Received">Received</option>
       <option value="In Design">In Design</option>
       <option value="Printing">Printing</option>
       <option value="Complete">Complete</option>
+      <option value="archived">Archived</option>
+      <option value="all">All (incl. archived)</option>
     </select>
     <button class="btn btn-ghost" onclick="loadOrders()">↻ Refresh</button>
   </div>
 </header>
+
+<div class="searchbar" id="searchBar">
+  <span class="search-icon">🔍</span>
+  <input type="search" id="searchInput" placeholder="Search name, contact, engraved text, notes, address, file…"
+         autocomplete="off" oninput="onSearchInput()" />
+  <button class="search-clear" id="searchClear" onclick="clearSearch()" title="Clear search">×</button>
+</div>
+
+<div class="result-count" id="resultCount"></div>
 
 <div class="stats" id="statsBar"></div>
 
@@ -306,6 +444,9 @@
 <script>
   const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx29n1eem9zsYqzJd1VH0h4w4aXTfrFEzq-vuah41jTfhtyPrlKb9Sx-66YHLqctIWB/exec";
 
+  const WORKFLOW_STATUSES = ["Received", "In Design", "Printing", "Complete"];
+  const ARCHIVE_PREFIX    = "Archived: ";
+
   let allOrders = [];
 
   // Login gate — no password required
@@ -316,6 +457,23 @@
   document.getElementById("passwordInput").addEventListener("keydown", function(e) {
     if (e.key === "Enter") checkPassword();
   });
+
+  // ── Archive helpers ──────────────────────────────────────────────────────
+  // Archive state lives in the sheet's Status column as "Archived: <status>",
+  // so the underlying workflow status survives an archive/unarchive round trip.
+  function isArchived(o) {
+    return String(o["Status"] || "").indexOf("Archived") === 0;
+  }
+  function baseStatus(o) {
+    const s = String(o["Status"] || "").trim();
+    if (s.indexOf(ARCHIVE_PREFIX) === 0) {
+      const b = s.slice(ARCHIVE_PREFIX.length).trim();
+      return WORKFLOW_STATUSES.indexOf(b) > -1 ? b : "Complete";
+    }
+    if (s.indexOf("Archived") === 0) return "Complete";   // tolerate a bare "Archived"
+    return WORKFLOW_STATUSES.indexOf(s) > -1 ? s : "Received";
+  }
+  function statusClass(s) { return "status-" + String(s).replace(/\s+/g, ""); }
 
   // ── Load orders from Apps Script ─────────────────────────────────────────
   async function loadOrders() {
@@ -343,18 +501,75 @@
 
   // ── Stats bar ────────────────────────────────────────────────────────────
   function renderStats() {
-    const total     = allOrders.length;
-    const received  = allOrders.filter(o => o["Status"] === "Received").length;
-    const inDesign  = allOrders.filter(o => o["Status"] === "In Design").length;
-    const printing  = allOrders.filter(o => o["Status"] === "Printing").length;
-    const complete  = allOrders.filter(o => o["Status"] === "Complete").length;
-    document.getElementById("statsBar").innerHTML = `
-      <div class="stat-card"><div class="num">${total}</div><div class="lbl">Total</div></div>
-      <div class="stat-card"><div class="num" style="color:#856404">${received}</div><div class="lbl">Received</div></div>
-      <div class="stat-card"><div class="num" style="color:#5a3e99">${inDesign}</div><div class="lbl">In Design</div></div>
-      <div class="stat-card"><div class="num" style="color:#0a6880">${printing}</div><div class="lbl">Printing</div></div>
-      <div class="stat-card"><div class="num" style="color:#0f5132">${complete}</div><div class="lbl">Complete</div></div>
-    `;
+    const active   = allOrders.filter(function(o) { return !isArchived(o); });
+    const archived = allOrders.length - active.length;
+    const count    = function(s) { return active.filter(function(o) { return baseStatus(o) === s; }).length; };
+    const current  = document.getElementById("statusFilter").value;
+
+    const cards = [
+      { key: "active",    num: active.length, lbl: "Active",    color: "#2a4a30" },
+      { key: "Received",  num: count("Received"),  lbl: "Received",  color: "#856404" },
+      { key: "In Design", num: count("In Design"), lbl: "In Design", color: "#5a3e99" },
+      { key: "Printing",  num: count("Printing"),  lbl: "Printing",  color: "#0a6880" },
+      { key: "Complete",  num: count("Complete"),  lbl: "Complete",  color: "#0f5132" },
+      { key: "archived",  num: archived, lbl: "Archived", color: "#999" }
+    ];
+
+    document.getElementById("statsBar").innerHTML = cards.map(function(c) {
+      return "<div class=\"stat-card" + (c.key === current ? " active" : "") + "\" onclick=\"setFilter('" + c.key + "')\">" +
+               "<div class=\"num\" style=\"color:" + c.color + "\">" + c.num + "</div>" +
+               "<div class=\"lbl\">" + c.lbl + "</div>" +
+             "</div>";
+    }).join("");
+  }
+
+  function setFilter(key) {
+    document.getElementById("statusFilter").value = key;
+    renderStats();
+    renderOrders();
+  }
+
+  // ── Search ───────────────────────────────────────────────────────────────
+  const SEARCH_FIELDS = ["Name", "Contact", "Top Line", "Bottom Line", "Notes",
+                         "Shipping Address", "Print File", "Shell Color",
+                         "Text Color", "Voltmeter Color"];
+
+  function searchBlob(o) {
+    return SEARCH_FIELDS.map(function(k) { return o[k] || ""; }).join("  ").toLowerCase();
+  }
+
+  function currentQuery() {
+    return (document.getElementById("searchInput").value || "").trim().toLowerCase();
+  }
+
+  function onSearchInput() {
+    const q = currentQuery();
+    document.getElementById("searchBar").classList.toggle("has-query", q.length > 0);
+    renderOrders();
+  }
+
+  function clearSearch() {
+    const input = document.getElementById("searchInput");
+    input.value = "";
+    document.getElementById("searchBar").classList.remove("has-query");
+    renderOrders();
+    input.focus();
+  }
+
+  // Escape a raw string AND wrap query matches in <mark>.
+  // Works on the raw text (not on escaped HTML) so it can never damage an entity.
+  function hl(raw) {
+    const s = String(raw == null ? "" : raw);
+    const q = currentQuery();
+    if (!q) return esc(s);
+    const re = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");
+    let out = "", last = 0, m;
+    while ((m = re.exec(s)) !== null) {
+      if (m[0].length === 0) { re.lastIndex++; continue; }
+      out += esc(s.slice(last, m.index)) + "<mark class=\"hit\">" + esc(m[0]) + "</mark>";
+      last = m.index + m[0].length;
+    }
+    return out + esc(s.slice(last));
   }
 
   // ── Color swatches ───────────────────────────────────────────────────────
@@ -375,52 +590,103 @@
 
   function swatch(colorName) {
     const hex = COLOR_MAP[colorName] || "#eee";
-    return "<span class=\"color-swatch\" style=\"background:" + hex + "\" title=\"" + colorName + "\"></span>";
+    return "<span class=\"color-swatch\" style=\"background:" + hex + "\" title=\"" + esc(colorName || "") + "\"></span>";
+  }
+
+  // ── Google Drive links ───────────────────────────────────────────────────
+  // Stored URL looks like https://drive.google.com/uc?id=<ID>&export=download
+  function driveFileId(url) {
+    const m = String(url || "").match(/[-\w]{25,}/);
+    return m ? m[0] : "";
+  }
+  function drivePreviewUrl(url) {
+    const id = driveFileId(url);
+    return id ? "https://drive.google.com/file/d/" + id + "/view" : String(url || "");
+  }
+
+  // ── Filtering ────────────────────────────────────────────────────────────
+  function visibleOrders() {
+    const filter = document.getElementById("statusFilter").value;
+    const q      = currentQuery();
+
+    let list;
+    if (filter === "archived")      list = allOrders.filter(isArchived);
+    else if (filter === "all")      list = allOrders.slice();
+    else if (filter === "active")   list = allOrders.filter(function(o) { return !isArchived(o); });
+    else list = allOrders.filter(function(o) { return !isArchived(o) && baseStatus(o) === filter; });
+
+    if (q) list = list.filter(function(o) { return searchBlob(o).indexOf(q) > -1; });
+    return list;
   }
 
   // ── Render order cards ───────────────────────────────────────────────────
   function renderOrders() {
-    const filter = document.getElementById("statusFilter").value;
-    const orders = filter === "all" ? allOrders :
-                   allOrders.filter(o => o["Status"] === filter);
-    const listEl = document.getElementById("orderList");
+    const filter  = document.getElementById("statusFilter").value;
+    const q       = currentQuery();
+    const orders  = visibleOrders();
+    const listEl  = document.getElementById("orderList");
+    const countEl = document.getElementById("resultCount");
+
+    if (q) {
+      countEl.style.display = "block";
+      countEl.textContent = orders.length + (orders.length === 1 ? " order matches “" : " orders match “") + q + "”";
+    } else {
+      countEl.style.display = "none";
+    }
 
     if (orders.length === 0) {
+      let msg;
+      if (q) msg = "No orders match your search.";
+      else if (filter === "archived") msg = "Nothing archived yet.";
+      else if (filter === "active" || filter === "all") msg = "No orders yet.";
+      else msg = "No " + filter.toLowerCase() + " orders.";
       listEl.innerHTML =
         "<div class=\"empty-state\">" +
-        "<div class=\"icon\">📭</div>" +
-        "<p>" + (filter === "all" ? "No orders yet." : "No " + filter.toLowerCase() + " orders.") + "</p>" +
+        "<div class=\"icon\">" + (q ? "🔍" : "📭") + "</div>" +
+        "<p>" + esc(msg) + "</p>" +
         "</div>";
       return;
     }
 
-    listEl.innerHTML = orders.map(function(o, idx) {
-      const realIdx    = allOrders.indexOf(o);
-      const statusClass = "status-" + (o["Status"] || "Received").replace(" ", "");
-      const hasText    = (o["Top Line"] && o["Top Line"] !== "(none)") ||
-                         (o["Bottom Line"] && o["Bottom Line"] !== "(none)");
-      const hasFile    = !!o["Print File"];
-      const sentAt     = o["Sent to Printer At"] || "";
+    listEl.innerHTML = orders.map(function(o) {
+      const realIdx  = allOrders.indexOf(o);
+      const archived = isArchived(o);
+      const base     = baseStatus(o);
+      const hasFile  = !!o["Print File"];
+      const fileUrl  = o["Print File URL"] || "";
+      const sentAt   = o["Sent to Printer At"] || "";
+
+      const topLine    = o["Top Line"]    && o["Top Line"]    !== "(none)" ? o["Top Line"]    : "";
+      const bottomLine = o["Bottom Line"] && o["Bottom Line"] !== "(none)" ? o["Bottom Line"] : "";
 
       const fileSection = hasFile
-        ? "<span>📎</span><span class=\"file-name\">" + esc(o["Print File"]) + "</span>" +
+        ? "<span>📎</span><span class=\"file-name\">" + hl(o["Print File"]) + "</span>" +
+          (fileUrl
+            ? "<span class=\"file-links\">" +
+                "<a class=\"file-link\" href=\"" + esc(drivePreviewUrl(fileUrl)) + "\" target=\"_blank\" rel=\"noopener\">View in Drive</a>" +
+                "<a class=\"file-link\" href=\"" + esc(fileUrl) + "\" target=\"_blank\" rel=\"noopener\">Download</a>" +
+              "</span>"
+            : "") +
           (o["File Attached At"] ? "<span class=\"file-meta\">attached " + esc(o["File Attached At"]) + "</span>" : "") +
           (sentAt ? "<span class=\"sent-meta\">✓ sent " + esc(sentAt) + "</span>" : "")
         : "<span class=\"no-file\" style=\"color:#bbb;font-style:italic;font-size:13px;\">No print file attached</span>";
 
-      return "<div class=\"order-card\">" +
+      return "<div class=\"order-card" + (archived ? " archived" : "") + "\">" +
 
         // Header
         "<div class=\"order-header\">" +
           "<div>" +
-            "<div class=\"name\">" + esc(o["Name"] || "—") + "</div>" +
-            "<div class=\"meta\">" + esc(o["Contact"] || "") + "  ·  " + esc(o["Submitted At"] || "") + "</div>" +
+            "<div class=\"name\">" + hl(o["Name"] || "—") + "</div>" +
+            "<div class=\"meta\">" + hl(o["Contact"] || "") + "  ·  " + esc(o["Submitted At"] || "") + "</div>" +
           "</div>" +
-          "<select class=\"status-select " + statusClass + "\" onchange=\"changeStatus(" + realIdx + ", this)\">" +
-            ["Received","In Design","Printing","Complete"].map(function(s) {
-              return "<option value=\"" + s + "\"" + (s === (o["Status"] || "Received") ? " selected" : "") + ">" + s + "</option>";
-            }).join("") +
-          "</select>" +
+          "<div class=\"hdr-right\">" +
+            (archived ? "<span class=\"archived-tag\">Archived</span>" : "") +
+            "<select class=\"status-select " + statusClass(base) + "\" onchange=\"changeStatus(" + realIdx + ", this)\">" +
+              WORKFLOW_STATUSES.map(function(s) {
+                return "<option value=\"" + s + "\"" + (s === base ? " selected" : "") + ">" + s + "</option>";
+              }).join("") +
+            "</select>" +
+          "</div>" +
         "</div>" +
 
         // Body — order details
@@ -439,25 +705,21 @@
           "</div>" : "") +
           "<div class=\"detail-item\">" +
             "<div class=\"dl\">Top Line</div>" +
-            "<div class=\"dv" + (!hasText || o["Top Line"] === "(none)" ? " none" : "") + "\">" +
-              esc(o["Top Line"] && o["Top Line"] !== "(none)" ? o["Top Line"] : "none") +
-            "</div>" +
+            "<div class=\"dv" + (topLine ? "" : " none") + "\">" + (topLine ? hl(topLine) : "none") + "</div>" +
           "</div>" +
           "<div class=\"detail-item\">" +
             "<div class=\"dl\">Bottom Line</div>" +
-            "<div class=\"dv" + (!hasText || o["Bottom Line"] === "(none)" ? " none" : "") + "\">" +
-              esc(o["Bottom Line"] && o["Bottom Line"] !== "(none)" ? o["Bottom Line"] : "none") +
-            "</div>" +
+            "<div class=\"dv" + (bottomLine ? "" : " none") + "\">" + (bottomLine ? hl(bottomLine) : "none") + "</div>" +
           "</div>" +
           (o["Shipping Address"] && o["Shipping Address"] !== "Pickup" ?
             "<div class=\"detail-item\" style=\"grid-column:1/-1\">" +
               "<div class=\"dl\">Shipping</div>" +
-              "<div class=\"dv\" style=\"font-size:13px;line-height:1.5\">" + esc(o["Shipping Address"]).replace(/ \| /g, "<br>") + "</div>" +
+              "<div class=\"dv\" style=\"font-size:13px;line-height:1.5\">" + hl(o["Shipping Address"]).replace(/ \| /g, "<br>") + "</div>" +
             "</div>" : "") +
           (o["Notes"] ?
             "<div class=\"detail-item\" style=\"grid-column:1/-1\">" +
               "<div class=\"dl\">Notes</div>" +
-              "<div class=\"dv\">" + esc(o["Notes"]) + "</div>" +
+              "<div class=\"dv\">" + hl(o["Notes"]) + "</div>" +
             "</div>" : "") +
         "</div>" +
 
@@ -466,11 +728,14 @@
           "<div class=\"file-info\">" + fileSection + "</div>" +
           "<div class=\"order-actions\">" +
             "<label class=\"upload-label\" id=\"ulabel-" + realIdx + "\">" +
-              (hasFile ? "🔄 Replace File" : "📁 Attach .3mf") +
+              "<span class=\"ul-text\">" + (hasFile ? "🔄 Replace File" : "📁 Attach .3mf") + "</span>" +
               "<input type=\"file\" accept=\".3mf,.stl,.obj,.zip\" style=\"display:none\" onchange=\"uploadFile(" + realIdx + ", this)\">" +
             "</label>" +
-            "<button class=\"btn btn-primary btn-sm\" onclick=\"sendToPrinter(" + realIdx + ")\"" + (!hasFile ? " disabled" : "") + ">" +
+            "<button class=\"btn btn-primary btn-sm\" onclick=\"sendToPrinter(" + realIdx + ", this)\"" + (!hasFile ? " disabled" : "") + ">" +
               "🖨 Send to Printer" +
+            "</button>" +
+            "<button class=\"btn btn-archive btn-sm\" onclick=\"toggleArchive(" + realIdx + ")\">" +
+              (archived ? "↩ Unarchive" : "🗄 Archive") +
             "</button>" +
           "</div>" +
         "</div>" +
@@ -481,33 +746,38 @@
 
   // ── Status change ────────────────────────────────────────────────────────
   function changeStatus(idx, selectEl) {
-    const newStatus = selectEl.value;
-    const order     = allOrders[idx];
+    const newBase = selectEl.value;
+    const order   = allOrders[idx];
+    const archived = isArchived(order);
 
     // Recolor the dropdown immediately
-    selectEl.className = "status-select status-" + newStatus.replace(" ", "");
+    selectEl.className = "status-select " + statusClass(newBase);
 
+    // Keep the archive flag if the order is archived
+    const written = archived ? ARCHIVE_PREFIX + newBase : newBase;
+
+    // Never email about an archived order, and never on a move back to Received
     const hasEmail = (order["Contact"] || "").indexOf("@") > -1;
-    if (newStatus === "Received" || !hasEmail) {
-      applyStatusUpdate(idx, newStatus, false);
+    if (archived || newBase === "Received" || !hasEmail) {
+      applyStatusUpdate(idx, written, false);
       return;
     }
-    showNotifyDialog(idx, newStatus);
+    showNotifyDialog(idx, written, newBase);
   }
 
-  function showNotifyDialog(idx, newStatus) {
+  function showNotifyDialog(idx, written, label) {
     const overlay = document.getElementById("notifyOverlay");
     const msg     = document.getElementById("notifyMsg");
-    msg.textContent = "Status → \"" + newStatus + "\". Notify the customer by email?";
+    msg.textContent = "Status → \"" + label + "\". Notify the customer by email?";
     overlay.style.display = "flex";
 
     document.getElementById("notifyYes").onclick = function() {
       overlay.style.display = "none";
-      applyStatusUpdate(idx, newStatus, true);
+      applyStatusUpdate(idx, written, true);
     };
     document.getElementById("notifyNo").onclick = function() {
       overlay.style.display = "none";
-      applyStatusUpdate(idx, newStatus, false);
+      applyStatusUpdate(idx, written, false);
     };
   }
 
@@ -531,6 +801,17 @@
     } catch(_) {}
   }
 
+  // ── Archive / unarchive ──────────────────────────────────────────────────
+  function toggleArchive(idx) {
+    const order = allOrders[idx];
+    const base  = baseStatus(order);
+    const next  = isArchived(order) ? base : ARCHIVE_PREFIX + base;
+    applyStatusUpdate(idx, next, false);
+    // Safe to re-render here — no dropdown is mid-interaction
+    renderStats();
+    renderOrders();
+  }
+
   // ── File upload ──────────────────────────────────────────────────────────
   function uploadFile(idx, inputEl) {
     const file = inputEl.files[0];
@@ -538,7 +819,11 @@
 
     const order  = allOrders[idx];
     const label  = document.getElementById("ulabel-" + idx);
-    if (label) { label.classList.add("busy"); label.childNodes[0].textContent = "Uploading…"; }
+    if (label) {
+      label.classList.add("busy");
+      const t = label.querySelector(".ul-text");
+      if (t) t.textContent = "Uploading…";
+    }
 
     const reader = new FileReader();
     reader.onload = async function(e) {
@@ -565,16 +850,17 @@
   }
 
   // ── Send to printer ──────────────────────────────────────────────────────
-  async function sendToPrinter(idx) {
+  async function sendToPrinter(idx, btn) {
     const order = allOrders[idx];
     if (!order["Print File"]) {
       alert("No print file attached to this order yet.");
       return;
     }
 
-    const btn = event.target;
-    btn.disabled = true;
-    btn.textContent = "Sending…";
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "Sending…";
+    }
 
     try {
       await fetch(APPS_SCRIPT_URL, {
@@ -597,7 +883,8 @@
     return String(str)
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
   }
 </script>
 </body>
